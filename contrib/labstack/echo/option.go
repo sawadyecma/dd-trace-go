@@ -14,6 +14,7 @@ import (
 
 type config struct {
 	serviceName   string
+	isStatusError func(statusCode int) bool
 	analyticsRate float64
 }
 
@@ -22,6 +23,8 @@ type Option func(*config)
 
 func defaults(cfg *config) {
 	cfg.serviceName = "echo"
+	cfg.isStatusError = isServerError
+
 	if svc := globalconfig.ServiceName(); svc != "" {
 		cfg.serviceName = svc
 	}
@@ -60,4 +63,15 @@ func WithAnalyticsRate(rate float64) Option {
 			cfg.analyticsRate = math.NaN()
 		}
 	}
+}
+
+// WithStatusCheck allow setting of a function to tell whether a status code is an error
+func WithStatusCheck(fn func(statusCode int) bool) Option {
+	return func(cfg *config) {
+		cfg.isStatusError = fn
+	}
+}
+
+func isServerError(statusCode int) bool {
+	return statusCode >= 500 && statusCode < 600
 }

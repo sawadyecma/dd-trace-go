@@ -7,7 +7,9 @@
 package echo
 
 import (
+	"fmt"
 	"math"
+	"net/http"
 	"strconv"
 
 	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace"
@@ -53,10 +55,15 @@ func Middleware(opts ...Option) echo.MiddlewareFunc {
 
 			// serve the request to the next middleware
 			err := next(c)
+
+			status := c.Response().Status
+
 			if err != nil {
 				span.SetTag(ext.Error, err)
 				// invokes the registered HTTP error handler
 				c.Error(err)
+			} else if cfg.isStatusError(status) {
+				span.SetTag(ext.Error, fmt.Errorf("%d: %s", status, http.StatusText(status)))
 			}
 
 			span.SetTag(ext.HTTPCode, strconv.Itoa(c.Response().Status))
